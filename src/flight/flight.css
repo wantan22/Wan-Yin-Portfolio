@@ -1,0 +1,272 @@
+/* ================= Flight: map, plane, sky (one page at a time) ================= */
+/* ---- Map layer ---- */
+.map-layer { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.map { width: 100%; height: 100%; display: block; }
+.map path, .map rect, .map circle, .map ellipse, .map line {
+  fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+  vector-effect: non-scaling-stroke; transition: stroke .4s ease;
+}
+.ma-map  { stroke: var(--line-map); }
+.ma-green, .ma-green * { stroke: var(--line-green); }
+.ma-sky, .ma-sky * { stroke: var(--line-sky); }
+.map .ma-thin, .map .ma-thin * { stroke-width: 1.1; }
+.ma-faint { stroke: var(--line-map); opacity: .5; }
+.map .ma-faint, .map .ma-faint * { stroke-width: 1; }
+.ma-path-faint, .ma-path-faint * { stroke: var(--line-path); }
+.ma-stamp, .ma-stamp * { stroke: var(--line-stamp); }
+.ma-far { opacity: var(--far, 1); }
+.ma-sunway { opacity: var(--near, 0); }
+
+.route { stroke: var(--line-path); }
+.map .route-ghost { stroke-width: 1.4; stroke-dasharray: 1 9; opacity: .35; }
+.map .route-dots { stroke-width: 3; stroke-dasharray: 1 8; }
+
+
+/* ---- Plane ---- */
+.plane-layer { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+.trail line { stroke: var(--line-plane); stroke-width: 1.4; stroke-linecap: round; fill: none; }
+.plane {
+  position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 2; pointer-events: none;
+  will-change: transform;
+}
+.plane svg {
+  position: absolute; width: 64px; height: 64px; left: -32px; top: -32px; overflow: visible;
+  stroke: var(--line-plane); stroke-width: 1.6;
+}
+.plane svg path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+:root[data-theme='dark'] .plane svg { filter: drop-shadow(0 0 4px rgba(230, 235, 255, .55)); }
+
+/* ---- Map labels (real HTML on a solid surface) ---- */
+.labels-layer { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
+.map-label {
+  position: absolute; left: 0; top: 0; pointer-events: auto; white-space: nowrap;
+  translate: -50% -50%; font-size: .78rem; font-weight: 600; text-decoration: none; color: var(--text);
+  background: var(--surface); border: var(--stroke) solid var(--border); border-radius: 999px;
+  padding: 3px 10px; transition: opacity .25s ease, border-color .2s ease; will-change: transform;
+}
+.map-label.area { font-family: var(--font-display); font-size: .86rem; letter-spacing: .04em; color: var(--accent); }
+.map-label.pin { font-size: .72rem; color: var(--text-2); }
+.map-label:hover { border-color: var(--accent); color: var(--text); }
+.map-label.hidden { opacity: 0; pointer-events: none; }
+
+
+/* ---- Landmarks sketch themselves in (line-draw) ---- */
+.map .lm :is(path, rect, circle, ellipse, line) {
+  vector-effect: none;                       /* dash maths needs map units */
+  stroke-width: calc(var(--s, .5) * 1.6px);  /* engine keeps lines ~1.6px on screen */
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: calc(1 - var(--d, 1));
+}
+.map .lm .ma-thin, .map .lm .ma-thin * { stroke-width: calc(var(--s, .5) * 1.1px); }
+
+
+/* ---- Map pins remember where you've been ---- */
+.map-label.pin.visited { color: var(--text); }
+.map-label.pin.current { border-color: var(--accent); background: var(--surface-tint); color: var(--text); }
+
+
+.ma-region > .ma-map, .ma-klang, .ma-klang * {
+  stroke: color-mix(in srgb, var(--line-warm) calc(var(--warm, 0) * 85%), var(--line-map));
+}
+.route { stroke: color-mix(in srgb, var(--line-warm) calc(var(--warm, 0) * 60%), var(--line-path)); }
+
+
+/* ================= Stage 6: sky, clouds, night flight ================= */
+.sky-bg {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: linear-gradient(180deg, var(--sky-top, var(--bg-1)), var(--sky-bottom, var(--bg-2)));
+  transition: background .3s linear;
+}
+.sky-layer { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.sky-layer svg { overflow: visible; }
+.sky-layer :is(path, circle, line) { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+
+/* sun (day) */
+.sun, .moon { position: absolute; left: 0; top: 0; will-change: transform; }
+.sun svg { width: 84px; height: 84px; translate: -50% -50%; opacity: .9; }
+.sun :is(circle, line) { stroke: var(--sun, #f2c46d); stroke-width: 1.6; }
+.sun .rays { animation: spin 60s linear infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* moon + stars (night) */
+.moon, .stars { display: none; }
+.moon svg { width: 70px; height: 70px; translate: -50% -50%; }
+.moon path { stroke: var(--sun); stroke-width: 1.6; filter: drop-shadow(0 0 5px rgba(230, 235, 255, .45)); }
+.moon .crater { stroke: var(--sun); stroke-width: 1; opacity: .6; }
+.stars { position: absolute; inset: 0; width: 100%; height: 100%; }
+.star { stroke: #dfe4ff; stroke-width: 1; animation: twinkle 3.6s ease-in-out infinite; }
+@keyframes twinkle { 0%, 100% { opacity: .25; } 50% { opacity: .95; } }
+:root[data-theme='dark'] .sun { display: none; }
+:root[data-theme='dark'] .moon, :root[data-theme='dark'] .stars { display: block; }
+
+/* clouds: outline only, drifting at different speeds */
+.cloud { position: absolute; left: 0; top: 0; will-change: transform; }
+.cloud svg { display: block; height: auto; translate: -50% 0; opacity: calc(.45 + var(--depth) * .5); animation: drift var(--drift) ease-in-out infinite alternate; }
+.cloud path { stroke: var(--cloud, var(--line-sky)); stroke-width: calc(1.1px + var(--depth) * .8px); }
+.cloud .cloud-line { stroke-dasharray: 2 6; opacity: .6; }
+@keyframes drift { from { transform: translateX(-28px); } to { transform: translateX(28px); } }
+@media (max-width: 900px) { .cloud.desk-only { display: none; } }
+
+/* city lights on the map at night */
+.ma-lights { display: none; }
+:root[data-theme='dark'] .ma-lights { display: inline; }
+.map .ma-lights circle { stroke: #ffd59a; stroke-width: 1.3; animation: twinkle 4.5s ease-in-out infinite; }
+.map .ma-lights circle:nth-child(3n) { animation-delay: 1.4s; }
+.map .ma-lights circle:nth-child(3n+1) { animation-delay: 2.6s; }
+
+
+/* ================= Pages on a blurred map ================= */
+html.fx-lock, html.fx-lock body { overflow: hidden; height: 100%; overscroll-behavior: none; }
+.fx { position: fixed; inset: 0; }
+
+/* the plane sits in the middle of the screen; make it a touch bigger */
+.plane svg { width: 72px; height: 72px; left: -36px; top: -36px; }
+
+/* labels are just labels now (navigation lives in the header and dots) */
+.map-label { pointer-events: none; }
+
+/* blur layer over the map while a page is open */
+.veil {
+  position: fixed; inset: 0; z-index: 4; pointer-events: none;
+  backdrop-filter: blur(7px) saturate(1.05); -webkit-backdrop-filter: blur(7px) saturate(1.05);
+  background: color-mix(in srgb, var(--sky-bottom, var(--bg-1)) 38%, transparent);
+  opacity: 1; transition: opacity .45s ease;
+}
+.fx[data-phase='flying'] .veil { opacity: 0; }
+
+/* the page card */
+.stage {
+  position: fixed; inset: 0; z-index: 5; display: grid; place-items: center;
+  padding: 88px max(16px, env(safe-area-inset-right, 0px)) 86px max(16px, env(safe-area-inset-left, 0px));
+  pointer-events: none;
+}
+.page-card {
+  pointer-events: auto; width: min(800px, 100%); max-height: 100%; overflow: auto; overscroll-behavior: contain;
+  padding: clamp(28px, 5vw, 56px);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  border: var(--stroke) solid var(--border); border-radius: 28px;
+  box-shadow: 0 30px 80px -50px rgba(43, 45, 66, .55);
+  animation: cardIn .5s cubic-bezier(.2, .8, .2, 1) both;
+  scrollbar-width: thin;
+}
+.fx[data-phase='flying'] .page-card { opacity: 0; transform: translateY(14px) scale(.985); transition: opacity .18s ease, transform .18s ease; pointer-events: none; }
+@keyframes cardIn { from { opacity: 0; transform: translateY(18px) scale(.985); } }
+/* home: no box, just the words on the blur */
+.page-card.card-hero { background: transparent; border-color: transparent; box-shadow: none; }
+
+/* things inside each page arrive one after another */
+.pg > * { animation: rise .55s cubic-bezier(.2, .8, .2, 1) both; }
+.pg > *:nth-child(2) { animation-delay: .06s; } .pg > *:nth-child(3) { animation-delay: .12s; }
+.pg > *:nth-child(4) { animation-delay: .18s; } .pg > *:nth-child(5) { animation-delay: .24s; } .pg > *:nth-child(n+6) { animation-delay: .3s; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+.board li { animation: rise .45s ease both; }
+.board li:nth-child(2) { animation-delay: .25s; } .board li:nth-child(3) { animation-delay: .32s; }
+.board li:nth-child(4) { animation-delay: .39s; } .board li:nth-child(5) { animation-delay: .46s; }
+.fx .stamps2 .stamp2 { animation: thunk .34s cubic-bezier(.3, 1.5, .5, 1) both; animation-delay: calc(.2s + var(--k) * 90ms); }
+@keyframes thunk { from { opacity: 0; transform: rotate(calc(var(--tilt) - 10deg)) scale(1.6); } }
+.fx .case { animation: drop .6s cubic-bezier(.3, 1.4, .5, 1) both; animation-delay: calc(.2s + var(--k) * 120ms); }
+@keyframes drop { from { opacity: 0; transform: translateY(-36px) rotate(-3deg); } }
+
+/* side dots */
+.dots { position: fixed; right: max(18px, env(safe-area-inset-right, 0px)); top: 50%; translate: 0 -50%; z-index: 6; display: grid; gap: 14px; }
+.dots a { position: relative; display: block; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--line-map); background: var(--surface); }
+.dots a.on { background: var(--accent); border-color: var(--accent); }
+.dot-tip { position: absolute; right: 22px; top: 50%; translate: 0 -50%; white-space: nowrap; font-size: .74rem; padding: 2px 9px; border-radius: 999px; background: var(--surface); border: var(--stroke) solid var(--border); color: var(--text); opacity: 0; transition: opacity .2s; pointer-events: none; }
+.dots a:hover .dot-tip, .dots a:focus-visible .dot-tip { opacity: 1; }
+
+/* next / back */
+.stepper {
+  position: fixed; left: 50%; translate: -50% 0; bottom: max(18px, env(safe-area-inset-bottom, 0px)); z-index: 6;
+  display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 6px; border-radius: 999px;
+  background: var(--surface); border: var(--stroke) solid var(--border); box-shadow: 0 8px 28px -22px rgba(43,45,66,.6);
+}
+.step-count { white-space: nowrap; font-size: .8rem; color: var(--text-2); font-variant-numeric: tabular-nums; padding: 0 4px; }
+.next-btn svg { animation: nudge 1.8s ease-in-out infinite; }
+@keyframes nudge { 50% { transform: translateY(3px); } }
+
+@media (max-width: 960px) {
+  .dots { display: none; }
+  .stage { padding-top: 80px; padding-bottom: 78px; }
+  .page-card { border-radius: 22px; }
+  .step-count { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-card, .pg > *, .board li, .fx .stamps2 .stamp2, .fx .case, .next-btn svg { animation: none; }
+  .veil { transition: none; }
+}
+
+/* ================= Opening: globe intro ================= */
+.fx :is(.fx-header, .stage, .dots, .stepper, .veil, .labels-layer, .plane-layer) { transition: opacity .7s ease; }
+.fx.is-intro :is(.fx-header, .stage, .dots, .stepper, .veil, .hero-clear, .strip-edge, .labels-layer, .plane-layer, .plane:not(.intro-plane)) { opacity: 0 !important; pointer-events: none; transition: none; }
+.intro { position: fixed; inset: 0; z-index: 8; pointer-events: none; }
+.intro-world {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, var(--sky-top, var(--bg-1)), var(--sky-bottom, var(--bg-2)));
+  opacity: calc(1 - var(--hand, 0));
+}
+.globe { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.globe path, .globe ellipse, .globe circle { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.g-sphere { stroke: var(--line-map); stroke-width: 1.6; }
+.g-grat { stroke: var(--line-sky); stroke-width: .8; opacity: calc(.7 * (1 - var(--zoom, 0) * 3)); }
+.g-land { stroke: var(--line-map); stroke-width: 1.3; }
+.g-borders { stroke: var(--line-map); stroke-width: .7; opacity: .45; }
+.g-my { stroke: var(--line-path); stroke-width: 2.4; opacity: clamp(0, calc(2.4 - var(--zoom, 0) * 3.2), 1); }
+.g-orbit { stroke: var(--line-plane); stroke-width: 1; stroke-dasharray: 2 7; opacity: calc(.6 * (1 - var(--find, 0))); }
+.g-pin circle { stroke: var(--line-path); stroke-width: 2; }
+.g-pin .g-ring { stroke-width: 1.2; animation: pinPulse 1.6s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes pinPulse { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+.intro-label {
+  position: absolute; left: 0; top: 0; translate: 22px -50%; white-space: nowrap;
+  font-size: .82rem; font-weight: 600; color: var(--text); background: var(--surface);
+  border: var(--stroke) solid var(--border); border-radius: 999px; padding: 3px 11px;
+}
+.intro-plane { z-index: 4; }
+.intro-skip {
+  position: absolute; pointer-events: auto;
+  right: max(20px, env(safe-area-inset-right, 0px)); bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  background: var(--surface);
+}
+
+/* ================= Page modes =================
+   data-mode="card"  : every page except Home and Projects (card on a blurred map, as before)
+   data-mode="hero"  : Home, the words sit in a calm zone, the airport art fills the rest
+   data-mode="strip" : Projects (Layout C), the map is a sharp strip along the bottom */
+.fx :is(.veil, .hero-clear, .strip-edge) { transition: opacity .45s ease; }
+.fx:not([data-mode='card']) .veil { opacity: 0; }
+.hero-clear { position: fixed; inset: 0; z-index: 3; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, var(--sky-top, var(--bg-1)) 0%, color-mix(in srgb, var(--sky-top, var(--bg-1)) 92%, transparent) 34%, transparent 52%); }
+.fx[data-mode='hero'] .hero-clear { opacity: 1; }
+.fx[data-phase='flying'] .hero-clear { opacity: 0; }
+.strip-edge { position: fixed; left: 0; right: 0; bottom: var(--strip, 200px); z-index: 3; pointer-events: none; border-top: 1.5px dashed var(--border); opacity: 0; }
+.fx[data-mode='strip']:not([data-phase='flying']) .strip-edge { opacity: 1; }
+
+/* Projects: map strip only, opens to full screen while flying */
+.fx .map-layer, .fx .labels-layer, .fx .plane-layer { transition: clip-path .75s cubic-bezier(.65, 0, .25, 1); clip-path: inset(0 0 0 0); }
+.fx[data-mode='strip']:not([data-phase='flying']):not(.is-intro) :is(.map-layer, .labels-layer, .plane-layer) { clip-path: inset(calc(100% - var(--strip, 200px)) 0 0 0); }
+.fx[data-mode='strip'] .stage {
+  display: block; inset: 0 0 var(--strip, 200px) 0; padding: 84px 0 10px;
+  overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; pointer-events: auto;
+}
+.fx[data-mode='strip'] .stage::-webkit-scrollbar { display: none; }
+.stage-in { height: 100%; width: 100%; min-width: 0; display: flex; flex-direction: column; }
+.stage-in .gate, .stage-in .rail-wrap, .stage-in .gate-head { min-width: 0; max-width: 100%; }
+.stage-in .rail-wrap { max-width: none; }
+.fx .stage-in .gate { flex: 1; min-height: 0; }
+.fx[data-phase='flying'] .stage-in { opacity: 0; transform: translateY(10px); transition: opacity .18s ease, transform .18s ease; pointer-events: none; }
+.fx .gate-head > *, .fx .rail-item, .fx .pass-wide { animation: rise .55s cubic-bezier(.2, .8, .2, 1) both; }
+.fx .rail-item { animation-delay: calc(.12s + min(var(--k), 5) * 70ms); }
+.fx .pass-wide { animation-delay: .12s; }
+.fx:is([data-mode='strip'], [data-mode='hero']) .dots { display: none; }
+.fx[data-mode='strip'] .stepper { left: max(18px, env(safe-area-inset-left, 0px)); translate: 0 0; }
+
+/* Home: words on the left (top on phones), art on the right (bottom on phones) */
+.fx[data-mode='hero'] .stage { justify-items: start; align-items: center; padding-left: clamp(24px, 6vw, 96px); }
+.fx[data-mode='hero'] .page-card { width: min(620px, 50vw); padding: 0; overflow: visible; }
+.fx[data-mode='achievements'] .page-card, .fx .page-card.card-achievements { width: min(1040px, 100%); }
+@media (max-width: 899px), (max-aspect-ratio: 11/10) {
+  .hero-clear { background: linear-gradient(180deg, var(--sky-top, var(--bg-1)) 0%, color-mix(in srgb, var(--sky-top, var(--bg-1)) 92%, transparent) 52%, transparent 66%); }
+  .fx[data-mode='hero'] .stage { align-items: start; justify-items: stretch; padding-left: max(16px, env(safe-area-inset-left, 0px)); }
+  .fx[data-mode='hero'] .page-card { width: 100%; max-width: 640px; padding: 8px 4px; }
+}
+
+@media (max-width: 600px) { .fx[data-mode='hero'] .hint { display: none; } }

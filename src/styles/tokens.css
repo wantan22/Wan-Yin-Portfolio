@@ -1,0 +1,81 @@
+/* Theme tokens. Light/dark only changes these variables. */
+:root {
+  --bg-1: #fdf8f5;
+  --bg-2: #f3f0fa;
+  --surface: #ffffff;
+  --surface-tint: #f7f4fd;
+  --border: #d9dcf3;
+  --text: #2b2d42;
+  --text-2: #5c6078;
+
+  --line-map: #8f9ee0;      /* slightly darker than #A7B4E8 for legibility */
+  --line-path: #ee9f8b;   /* peach, a touch darker than #F4B6A6 so dots read on cream */
+  --line-plane: #8e9af0;
+  --line-sky: #bfe3f2;
+  --line-green: #8fd0b7;
+  --line-stamp: #a98fd6;
+
+  --accent: #4f5bd5;   /* 5.5:1 on white, passes WCAG AA */
+  --accent-ink: #ffffff;
+  --focus: #4f5bd5;
+
+  --radius: 18px;
+  --stroke: 1.5px;
+  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg-1: #0e1020;
+  --bg-2: #181b33;
+  --surface: #1a1d36;
+  --surface-tint: #20244a;
+  --border: #33386a;
+  --text: #eceeff;
+  --text-2: #a4a8c8;
+
+  --line-map: #7c8cf0;
+  --line-path: #ff9e80;
+  --line-plane: #e6ebff;
+  --line-sky: #6b8ac0;
+  --line-green: #5fd4b0;
+  --line-stamp: #b79cff;
+
+  --accent: #9aa6ff;
+  --accent-ink: #0e1020;
+  --focus: #b79cff;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+/* never allow sideways scrolling (animated stamps briefly scale up past the edge) */
+html, body { overflow-x: clip; }
+html.fast { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html.fast { scroll-behavior: auto; } }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--text);
+  background: linear-gradient(180deg, var(--bg-1), var(--bg-2)) fixed;
+  background-color: var(--bg-1);
+  line-height: 1.6;
+  transition: background-color .3s ease, color .3s ease;
+}
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; margin: 0; }
+a { color: inherit; }
+:focus-visible { outline: 2.5px solid var(--focus); outline-offset: 3px; border-radius: 6px; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Line-art rule: every illustration is outline only */
+.line-art, .line-art * {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}

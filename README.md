@@ -1,6 +1,6 @@
 # Teo Wan Yin · Flight Portfolio
 
-A scroll-driven portfolio told as one flight: take off at **Subang**, zoom into **Sunway City** (projects, achievements, skills), then fly home to **Klang** (about, resume, contact). A plain **fast lane** version shows the same content without animation.
+A scroll-driven portfolio told as one flight: take off at **Subang**, zoom into **Sunway City** (projects, hackathons, achievements, skills), then fly home to **Klang** (about, resume, contact). A plain **fast lane** version shows the same content without animation.
 
 Built with React 18, Vite 5, GSAP (ScrollTrigger + ScrollToPlugin) and inline SVG line art.
 
@@ -27,10 +27,11 @@ Everything lives in **`src/content.js`**. Both the flight and the fast lane read
 |---|---|
 | Name, headline, course, hometown | `person` |
 | Email, GitHub, LinkedIn | `socials` |
-| Projects (newest first) | `projects` (each one points at a Sunway `landmark`; optional `image`, `imageAlt`, `demoLabel`) |
-| Smaller projects list | `moreProjects`, `moreProjectsNote` |
-| Awards, certificates, hackathons | `achievements` (`icon`: trophy, medal, certificate, star, flag; optional `shape`: rounded, oval, ticket) |
-| Skills | `skills` (groups become luggage tags) |
+| Projects (newest first) | `projects`: `about`, `features`, `built`, `ai`, `fixed`, `tech`, links (`live`, `video`, `code`) and `images` (screenshots in `public/img`). Each one points at a Sunway `landmark` |
+| Smaller projects list | `moreProjects` |
+| Hackathons | `hackathons` (newest first) and `hackathonsMore` (the "more coming" line) |
+| Awards and certificates | `achievements` (`icon`: trophy, medal, certificate, star, flag; `certs`: certificate images in `public/img/certs`), `certificatesPdf` |
+| Skills | `skills` (one suitcase per group: Frontend, Backend, Database, Soft skills) and `skillsAlso` (short lines underneath) |
 | Klang story, quick facts, local touches, photo | `about` |
 | Contact form service, closing line | `contact` |
 | Resume file, summary, extra documents | `resume` |
@@ -46,10 +47,12 @@ Everything lives in **`src/content.js`**. Both the flight and the fast lane read
 
 ## 3. Replace the resume
 
-1. Save your CV as **`public/resume.pdf`** (keep this exact name). The certificates are `public/certificates.pdf`.
+1. Save your CV as **`public/resume.pdf`** (keep this exact name).
 2. In `src/content.js`, update **`resume.lastUpdated`** (for example `'December 2026'`).
 3. Optional: change **`resume.downloadName`**, the file name recruiters get when they download.
-4. Optional extra documents (transcript, certificates): put the PDFs in `/public` and list them in `resume.documents`, for example `{ label: 'Academic transcript', file: '/transcript.pdf' }`.
+4. Optional extra documents (for example a transcript): put the PDF in `/public` and list it in `resume.documents`, for example `{ label: 'Academic transcript', file: 'transcript.pdf' }`.
+
+**Adding a certificate:** save a picture of it (JPG, PNG or WebP) in `public/img/certs/`, then add it to that achievement's `certs` list in `content.js`, for example `{ src: 'img/certs/new-cert.webp', label: 'Nov 2026' }`. It shows when someone opens that stamp. If you keep a combined PDF, replace `public/certificates.pdf` too.
 
 The download button is always a plain link to `/resume.pdf`, so it works even if the animation or the viewer fails. The deploy configs tell browsers not to cache the PDF for long, so a new upload shows up straight away.
 
@@ -76,8 +79,7 @@ Until then, "Send message" opens the visitor's email app with the message filled
 2. It reads `netlify.toml` (build `npm run build`, publish `dist`).
 
 ### After the first deploy
-- In `index.html`, replace `https://TODO.vercel.app/` in the **canonical** link with your real address.
-- Set `site.url` in `content.js` to the same address.
+- The **canonical** link in `index.html` and `site.url` in `content.js` are set to `https://wan-yin-portfolio.vercel.app`. If your Vercel address is different, change both.
 - Check the share preview at opengraph.xyz (uses `public/og-image.jpg`).
 
 Both configs cache the built assets for a year (their file names change on every build) and keep `resume.pdf` fresh.

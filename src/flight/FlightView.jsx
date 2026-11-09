@@ -3,7 +3,7 @@ import { gsap } from 'gsap';
 import { person, resume, stops, landmarks, projects, transit } from '../content.js';
 import { Download, Sun, Moon, Plane as PlaneIcon, ArrowDown, ArrowUp } from '../components/Icons.jsx';
 import {
-  HomePage, ProjectsPage, ProjectDetail, AchievementsPage, SkillsPage, AboutPage, ResumePage, ContactPage, railBus,
+  HomePage, ProjectsPage, ProjectDetail, HackathonsPage, AchievementsPage, SkillsPage, AboutPage, ResumePage, ContactPage, railBus,
 } from '../components/Sections.jsx';
 import MapArt from './MapArt.jsx';
 import Sky, { cloudSpecs } from './Sky.jsx';
@@ -26,13 +26,13 @@ const prefersReducedEarly = () => window.matchMedia?.('(prefers-reduced-motion: 
 // the new page appears on top.
 // ---------------------------------------------------------------
 
-const PAGES = stops.map((s) => s.id); // hero, projects, achievements, skills, about, resume, contact
+const PAGES = stops.map((s) => s.id); // hero, projects, hackathons, achievements, skills, about, resume, contact
 const byId = Object.fromEntries(stops.map((s) => [s.id, s]));
 const lmById = Object.fromEntries(landmarks.map((l) => [l.id, l]));
 const prefersReduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 const PAGE_VIEW = {
-  hero: HomePage, projects: ProjectsPage, achievements: AchievementsPage, skills: SkillsPage,
+  hero: HomePage, projects: ProjectsPage, hackathons: HackathonsPage, achievements: AchievementsPage, skills: SkillsPage,
   about: AboutPage, resume: ResumePage, contact: ContactPage,
 };
 
@@ -43,7 +43,7 @@ function buildRoute() {
   return [
     main('hero'), main('projects'),
     ...projectStops.map((l) => ({ ...l, kind: 'landmark' })),
-    main('achievements'), main('skills'),
+    main('hackathons'), main('achievements'), main('skills'),
     { id: 'transit', kind: 'transit', ...transit },
     main('about'), main('resume'), main('contact'),
   ];
@@ -173,7 +173,7 @@ export default function FlightView({ theme, onToggleTheme, onSkip }) {
     const layout = () => {
       const vw = window.innerWidth, vh = window.innerHeight;
       const tall = vh > vw * 1.15;
-      e.strip = Math.round(vw < 700 ? clamp(vh * 0.2, 120, 170) : tall ? clamp(vh * 0.4, 160, 520) : clamp(vh * 0.22, 140, 220));
+      e.strip = Math.round(vw < 700 ? clamp(vh * 0.16, 96, 150) : tall ? clamp(vh * 0.4, 160, 520) : clamp(vh * 0.22, 140, 220));
       root.style.setProperty('--strip', `${e.strip}px`);
       const a = e.anchorFor(e.page);
       e.tx = a.x; e.ty = a.y; e.pk = a.k; e.zm = a.z;
@@ -383,7 +383,7 @@ export default function FlightView({ theme, onToggleTheme, onSkip }) {
     const { target: t } = stateRef.current;
     if (t.project) {
       const i = projects.findIndex((p) => p.id === t.project);
-      if (dir > 0) return goTo(i < projects.length - 1 ? { page: 'projects', project: projects[i + 1].id } : { page: 'achievements', project: null });
+      if (dir > 0) return goTo(i < projects.length - 1 ? { page: 'projects', project: projects[i + 1].id } : { page: 'hackathons', project: null });
       return goTo({ page: 'projects', project: null });
     }
     const i = PAGES.indexOf(t.page);
@@ -501,7 +501,7 @@ export default function FlightView({ theme, onToggleTheme, onSkip }) {
   const nextOf = (() => {
     if (target.project) {
       const i = projects.findIndex((p) => p.id === target.project);
-      return i < projects.length - 1 ? projects[i + 1].name : byId.achievements.label;
+      return i < projects.length - 1 ? projects[i + 1].name : byId.hackathons.label;
     }
     return pageIndex < PAGES.length - 1 ? byId[PAGES[pageIndex + 1]].label : null;
   })();
@@ -515,8 +515,8 @@ export default function FlightView({ theme, onToggleTheme, onSkip }) {
       <ProjectDetail p={shownProject}
         onBack={() => goTo({ page: 'projects', project: null })}
         onPrev={prv ? () => goTo({ page: 'projects', project: prv.id }) : undefined}
-        onNext={() => goTo(nxt ? { page: 'projects', project: nxt.id } : { page: 'achievements', project: null })}
-        nextLabel={nxt ? `Next: ${nxt.name}` : 'Next: Stamps'} />
+        onNext={() => goTo(nxt ? { page: 'projects', project: nxt.id } : { page: 'hackathons', project: null })}
+        nextLabel={nxt ? `Next: ${nxt.name}` : 'Next: Hackathons'} />
     );
   } else {
     const View = PAGE_VIEW[shown.page];

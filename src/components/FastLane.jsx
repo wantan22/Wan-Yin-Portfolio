@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { person, resume, stops, projects } from '../content.js';
 import { Plane, Download, Sun, Moon } from './Icons.jsx';
 import {
-  HomePage, ProjectsPage, ProjectDetail, AchievementsPage, SkillsPage, AboutPage, ResumePage, ContactPage,
+  HomePage, ProjectsPage, ProjectDetail, HackathonsPage, AchievementsPage, SkillsPage, AboutPage, ResumePage, ContactPage,
 } from './Sections.jsx';
 
 // The plain, scannable version: the same pages, stacked, with lots of room.
@@ -68,6 +68,7 @@ export default function FastLane({ theme, onToggleTheme, onTakeFlight }) {
             {open && <ProjectDetail p={open} compact onBack={() => setOpenId(null)} />}
           </div>
         </section>
+        <section id="hackathons" className="fl-section" aria-labelledby="hackathons-title"><HackathonsPage /></section>
         <section id="achievements" className="fl-section" aria-labelledby="achievements-title"><AchievementsPage /></section>
         <section id="skills" className="fl-section" aria-labelledby="skills-title"><SkillsPage /></section>
         <section id="about" className="fl-section warm" aria-labelledby="about-title"><AboutPage /></section>

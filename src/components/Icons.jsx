@@ -101,8 +101,15 @@ export const Copy = (p) => (
   <svg {...base} {...p}><rect x="8.5" y="8.5" width="11" height="11" rx="2" /><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5" /></svg>
 );
 
+export const Server = (p) => (
+  <svg {...base} {...p}><rect x="4" y="4.5" width="16" height="6" rx="1.5" /><rect x="4" y="13.5" width="16" height="6" rx="1.5" /><path d="M7.5 7.5h.01M7.5 16.5h.01M11 7.5h5M11 16.5h5" /></svg>
+);
+export const Database = (p) => (
+  <svg {...base} {...p}><ellipse cx="12" cy="6" rx="7" ry="2.5" /><path d="M5 6v12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5" /></svg>
+);
+
 // Pick an icon by name (used by content.js entries)
-export const iconByName = { code: Code, wrench: Wrench, people: People, store: Store };
+export const iconByName = { code: Code, wrench: Wrench, people: People, store: Store, server: Server, database: Database };
 
 // Passport stamp icons
 const stampIcons = {

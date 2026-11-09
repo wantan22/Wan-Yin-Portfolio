@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   person, socials, resume, projects, moreProjects, achievements, skills, skillsAlso,
-  about, contact, landmarks, flight,
+  about, contact, landmarks, flight, hackathons, hackathonsMore, certificatesPdf,
 } from '../content.js';
 import {
   Download, Doc, Mail, Github, Linkedin, External, StampIcon, Avatar, Plane as PlaneIcon,
@@ -179,45 +179,154 @@ export function ProjectsPage({ onActive, onOpen, global }) {
 }
 
 // ---------- One project: the boarding pass ----------
-// Everything shows at once when it fits. If it doesn't (small or short screens),
-// it splits into 2 short steps with Back / Next, and on very small screens the
-// picture steps aside. Nothing ever scrolls inside the pass.
+// The pass holds four short parts: Overview, Features, How I built it, Tech & links.
+// Everything shows at once when it fits. If it doesn't, it splits into 2, 3 or 4
+// steps with Back / Next (and on small screens the picture steps aside).
+// Nothing ever scrolls inside the pass.
+// Layouts, tried in order until nothing overflows:
+//   0: picture + all four parts in two columns
+//   1: picture + as many steps as needed (filled block by block, up to 5)
+//   2: no picture + as many steps as needed
+//   3: the same, with the overview split into sentences (very small screens)
+const PASS_PLANS = [
+  { img: true, cols: true },
+  { img: true, auto: true, maxPages: 5 },
+  { img: false, auto: true },
+  { img: false, auto: true, split: true },
+];
+const PART_NAME = { ov: 'Overview', feat: 'Features', how: 'How I built it', tech: 'Tech & links' };
+
+// The pass content as small blocks. A step never splits a block, and a heading
+// always stays with the block after it.
+function passBlocks(p, split) {
+  const B = [];
+  const add = (part, key, node, head) => B.push({ part, key, node, head });
+  add('ov', 'ov-h', <h3 className="pw-label">What it is</h3>, true);
+  if (split) (p.about.match(/[^.!?]+[.!?]+["”]?\s*/g) || [p.about]).forEach((t, j) => add('ov', `ov-p${j}`, <p className="pw-text">{t.trim()}</p>));
+  else add('ov', 'ov-p', <p className="pw-text">{p.about}</p>);
+  if (p.features?.length) {
+    add('feat', 'feat-h', <h3 className="pw-label">What it does</h3>, true);
+    p.features.forEach((f, j) => add('feat', `feat-${j}`, <ul className="pw-list"><li>{f}</li></ul>));
+  }
+  add('how', 'how-h', <h3 className="pw-label">How I built it</h3>, true);
+  (p.built || []).forEach((f, j) => add('how', `how-${j}`, <ul className="pw-list"><li>{f}</li></ul>));
+  if (p.ai) add('how', 'how-ai', <dl className="pass-lines"><div><dt><Code width={20} height={20} /> AI</dt><dd>{p.ai}</dd></div></dl>);
+  if (p.fixed) add('how', 'how-fix', <dl className="pass-lines"><div><dt><Wrench width={20} height={20} /> Fixed</dt><dd>{p.fixed}</dd></div></dl>);
+  add('tech', 'tech-h', <h3 className="pw-label">Tech</h3>, true);
+  const tagRows = split ? Array.from({ length: Math.ceil(p.tech.length / 4) }, (_, j) => p.tech.slice(j * 4, j * 4 + 4)) : [p.tech];
+  tagRows.forEach((row, j) => add('tech', `tech-t${j}`, <ul className="tags" aria-label={j ? 'Tech, continued' : 'Tech'}>{row.map((t) => <li key={t}>{t}</li>)}</ul>));
+  add('tech', 'tech-m', <p className="pw-meta">{p.role} · {p.date}</p>);
+  if (p.live || p.video || p.code) add('tech', 'tech-l', (
+    <div className="pw-links">
+      <div className="row">
+        {p.live && <a className="pill solid" href={p.live} target="_blank" rel="noopener">Live demo <External width={15} height={15} /><span className="sr-only"> of {p.name} (opens in a new tab)</span></a>}
+        {p.video && <a className="pill ghost" href={p.video} target="_blank" rel="noopener">Watch demo <External width={15} height={15} /><span className="sr-only"> video of {p.name} (opens in a new tab)</span></a>}
+        {p.code && <a className="pill ghost" href={p.code} target="_blank" rel="noopener">Code<span className="sr-only"> for {p.name}</span></a>}
+      </div>
+      {p.live && p.liveNote && <p className="pw-note">{p.liveNote}</p>}
+    </div>
+  ));
+  return B;
+}
+
 export function ProjectDetail({ p, onBack, onPrev, onNext, nextLabel }) {
   const i = projects.indexOf(p);
   const lm = lmOf(p);
   const mainRef = useRef(null);
-  const [fit, setFit] = useState(0); // 0 all at once, 1 two steps, 2 two steps without the picture, 3 three steps
+  const pageRef = useRef(null);
+  const measureRef = useRef(null);
+  const [fit, setFit] = useState(0);
   const [step, setStep] = useState(0);
+  const [shot, setShot] = useState(0);
+  const [auto, setAuto] = useState(null); // pages of block indexes, once measured
+  const plan = PASS_PLANS[fit];
+  const blocks = passBlocks(p, plan.split);
 
+  // fixed layouts: if it overflows, try the next layout
   useLayoutEffect(() => {
-    const el = mainRef.current;
-    if (el && el.scrollHeight > el.clientHeight + 1 && fit < 3) { setFit(fit + 1); setStep(0); }
+    if (plan.auto) return;
+    const over = (el) => el && el.scrollHeight > el.clientHeight + 1;
+    if (over(mainRef.current) || over(pageRef.current)) { setFit(fit + 1); setAuto(null); }
   });
+
+  // auto layout: measure each block and fill steps one by one
+  useLayoutEffect(() => {
+    if (!plan.auto || auto) return;
+    const box = pageRef.current, m = measureRef.current;
+    if (!box || !m) return;
+    const avail = box.clientHeight;
+    const gap = parseFloat(getComputedStyle(m).rowGap) || 0;
+    const hs = [...m.children].map((c) => c.offsetHeight);
+    const pages = [];
+    let cur = [], used = 0, tooBig = false;
+    const push = () => { if (cur.length) pages.push(cur); cur = []; used = 0; };
+    for (let j = 0; j < blocks.length; j++) {
+      // a heading moves with the block after it, and has a little extra space above it
+      const pair = blocks[j].head && j + 1 < blocks.length;
+      const h = pair ? hs[j] + gap + hs[j + 1] : hs[j];
+      let extra = cur.length ? gap + (blocks[j].head ? 12 : 0) : 0;
+      if (used + extra + h > avail && cur.length) { push(); extra = 0; }
+      if (h > avail) tooBig = true;
+      cur.push(j); if (pair) cur.push(++j);
+      used += extra + h;
+    }
+    push();
+    if ((tooBig || (plan.maxPages && pages.length > plan.maxPages)) && fit < PASS_PLANS.length - 1) { setFit(fit + 1); return; }
+    setAuto(pages);
+    setStep((s) => Math.min(s, pages.length - 1));
+  });
+
   useEffect(() => {
     let t;
-    const onResize = () => { clearTimeout(t); t = setTimeout(() => { setFit(0); setStep(0); }, 150); };
+    const onResize = () => { clearTimeout(t); t = setTimeout(() => { setFit(0); setStep(0); setAuto(null); }, 150); };
     window.addEventListener('resize', onResize);
     return () => { window.removeEventListener('resize', onResize); clearTimeout(t); };
   }, []);
 
-  const built = <div><dt><Code width={20} height={20} /> Built</dt><dd>{p.built}</dd></div>;
-  const outcome = (p.fixed || p.result) && (p.fixed
-    ? <div><dt><Wrench width={20} height={20} /> Fixed</dt><dd>{p.fixed}</dd></div>
-    : <div><dt><Flag width={20} height={20} /> Result</dt><dd>{p.result}</dd></div>);
-  const what = <dl className="pass-lines">{built}{outcome}</dl>;
-  const how = (
-    <div className="pw-how">
-      <p className="pw-label">Tech</p>
-      <ul className="tags" aria-label="Tech">{p.tech.map((t) => <li key={t}>{t}</li>)}</ul>
-      <p className="pw-meta">{p.role} · {p.date}</p>
-    </div>
-  );
-  const links = (p.demo || p.code) && (
-    <div className="row">
-      {p.demo && <a className="pill solid" href={p.demo} target="_blank" rel="noopener">{p.demoLabel || 'Live demo'} <External width={15} height={15} /><span className="sr-only"> of {p.name} (opens in a new tab)</span></a>}
-      {p.code && <a className="pill ghost" href={p.code} target="_blank" rel="noopener">Code<span className="sr-only"> for {p.name}</span></a>}
-    </div>
-  );
+  const images = p.images || [];
+  const partNodes = (part) => blocks.filter((b) => b.part === part);
+  const renderPart = (part) => {
+    const bs = partNodes(part);
+    if (!bs.length) return null;
+    return <section key={part} className="pw-part">{bs.map((b) => <div key={b.key} className="pw-block">{b.node}</div>)}</section>;
+  };
+
+  let body;
+  if (plan.cols) {
+    body = (
+      <div className="pw-cols">
+        <div className="pw-col1">{renderPart('ov')}{renderPart('feat')}</div>
+        <div className="pw-col2">{renderPart('how')}{renderPart('tech')}</div>
+      </div>
+    );
+  } else {
+    const pages = plan.auto
+      ? (auto || [[]]).map((idx) => idx.map((j) => blocks[j]))
+      : plan.pages.map((pg) => blocks.filter((b) => pg.includes(b.part)));
+    const k = Math.min(step, pages.length - 1);
+    const label = (pg) => {
+      const names = [...new Set(pg.map((b) => b.part))].map((x) => PART_NAME[x]);
+      if (pg[0] && !pg[0].head && names.length) names[0] += ' (cont.)';
+      return names.join(', ');
+    };
+    body = (
+      <>
+        <div className={`pw-page ${plan.auto ? 'flat' : ''}`} ref={pageRef} key={`${fit}-${k}-${auto ? 1 : 0}`}>
+          {plan.auto
+            ? (auto ? pages[k].map((b) => <div key={b.key} className={`pw-block ${b.head ? 'is-head' : ''}`}>{b.node}</div>)
+              : <div className="pw-measure" ref={measureRef} aria-hidden="true">{blocks.map((b) => <div key={b.key} className={`pw-block ${b.head ? 'is-head' : ''}`}>{b.node}</div>)}</div>)
+            : [...new Set(pages[k].map((b) => b.part))].map(renderPart)}
+        </div>
+        <div className="pw-steps">
+          <span className="muted">{k + 1} / {pages.length}<span className="step-name"> · {label(pages[k])}</span></span>
+          <div className="row">
+            <button className="pill ghost" onClick={() => setStep(k - 1)} disabled={k === 0}><ArrowLeft width={16} height={16} /> Back</button>
+            <button className="pill ghost" onClick={() => setStep(k + 1)} disabled={k === pages.length - 1}>Next <ArrowRight width={16} height={16} /></button>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <div className="gate gate-project">
@@ -231,33 +340,56 @@ export function ProjectDetail({ p, onBack, onPrev, onNext, nextLabel }) {
             {onNext && <button className="pill ghost" onClick={onNext}>{nextLabel} <ArrowRight width={16} height={16} /></button>}
           </div>
         )} />
-      <article className={`pass-wide fit-${Math.min(fit, 2)}`} aria-label={`${p.name} boarding pass`}>
-        {fit < 2 && (p.image
-          ? <img className="pw-shot" src={p.image} alt={p.imageAlt || ''} decoding="async" />
-          : <div className="pw-shot pw-blank" aria-hidden="true"><PlaneIcon width={46} height={46} /><b>{lm?.code}</b><small>{lm?.label}</small></div>)}
-        <div className="pw-main" ref={mainRef}>
-          {fit === 0 ? <div className="pw-cols"><div>{what}</div><div className="pw-col2">{how}{links}</div></div> : (() => {
-            const steps = fit < 3 || !outcome
-              ? [{ label: 'What it does', body: what }, { label: 'How it was built', body: <>{how}{links}</> }]
-              : [{ label: 'What it does', body: <dl className="pass-lines">{built}</dl> },
-                 { label: p.fixed ? 'What I fixed' : 'Result', body: <dl className="pass-lines">{outcome}</dl> },
-                 { label: 'How it was built', body: <>{how}{links}</> }];
-            const k = Math.min(step, steps.length - 1);
-            return (
-              <>
-                {steps[k].body}
-                <div className="pw-steps">
-                  <span className="muted">{k + 1} / {steps.length}<span className="step-name"> · {steps[k].label}</span></span>
-                  <div className="row">
-                    <button className="pill ghost" onClick={() => setStep(k - 1)} disabled={k === 0}><ArrowLeft width={16} height={16} /> Back</button>
-                    <button className="pill ghost" onClick={() => setStep(k + 1)} disabled={k === steps.length - 1}>Next <ArrowRight width={16} height={16} /></button>
-                  </div>
-                </div>
-              </>
-            );
-          })()}
-        </div>
+      <article className={`pass-wide ${plan.img ? '' : 'no-img'}`} aria-label={`${p.name} boarding pass`}>
+        {plan.img && (
+          <div className="pw-media">
+            {images.length
+              ? <img className="pw-shot" src={images[shot % images.length].src} alt={images[shot % images.length].alt || ''} decoding="async" />
+              : <div className="pw-shot pw-blank" aria-hidden="true"><PlaneIcon width={46} height={46} /><b>{lm?.code}</b><small>{lm?.label}</small></div>}
+            {images.length > 1 && (
+              <div className="pw-thumbs" role="group" aria-label="Screenshots">
+                {images.map((im, j) => (
+                  <button key={im.src} className={j === shot ? 'on' : ''} onClick={() => setShot(j)}
+                    aria-label={`Screenshot ${j + 1} of ${images.length}`} aria-pressed={j === shot}>
+                    <img src={im.src} alt="" decoding="async" loading="lazy" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        <div className="pw-main" ref={mainRef}>{body}</div>
       </article>
+    </div>
+  );
+}
+
+// ---------- Hackathons: race-day tickets ----------
+export function HackathonsPage() {
+  return (
+    <div className="pg pg-hackathons">
+      <Head id="hackathons" eyebrow="Race day" title="Hackathons" lead="Short sprints, real teams, real pitches." />
+      <ul className="hk-list">
+        {hackathons.map((h, i) => (
+          <li key={h.id} className={`hk ${h.upcoming ? 'upcoming' : ''}`} style={{ '--k': i }}>
+            <div className="hk-band">
+              <span className="hk-status"><Flag width={16} height={16} /> {h.status}</span>
+              <span className="hk-date">{h.date}</span>
+            </div>
+            <div className="hk-body">
+              <h3>{h.name}</h3>
+              <p className="hk-host">{h.host}{h.role ? ` · ${h.role}` : ''}</p>
+              {h.idea && <p className="hk-idea">Our idea: <b>{h.idea}</b></p>}
+              <ul className="pw-list">{h.lines.map((l) => <li key={l}>{l}</li>)}</ul>
+              {h.tags?.length > 0 && <ul className="tags" aria-label="Topics">{h.tags.map((t) => <li key={t}>{t}</li>)}</ul>}
+            </div>
+          </li>
+        ))}
+        <li className="hk hk-more" style={{ '--k': hackathons.length }}>
+          <PlaneIcon width={28} height={28} />
+          <p>{hackathonsMore}</p>
+        </li>
+      </ul>
     </div>
   );
 }
@@ -282,6 +414,7 @@ export function Stamp({ a, i }) {
         <div className="stamp-text">
           <span className="stamp-title">{a.title}</span>
           <span className="stamp-event">{a.event}</span>
+          {a.certs?.length > 0 && <span className="stamp-cert"><Doc width={14} height={14} /> {a.certs.length > 1 ? `${a.certs.length} certificates` : 'Certificate'}</span>}
         </div>
       </div>
     </div>
@@ -293,15 +426,23 @@ export function Stamp({ a, i }) {
 // at a readable size, so nothing needs scrolling.
 export function AchievementsPage() {
   const dlg = useRef(null);
+  const certDlg = useRef(null);
   const [at, setAt] = useState(0);
+  const [cert, setCert] = useState(null); // { list, i }
   const n = achievements.length;
   const open = (i) => { setAt(i); dlg.current?.showModal?.(); };
   const close = () => dlg.current?.close();
   const turn = (d) => setAt((x) => Math.max(0, Math.min(n - 1, x + d)));
+  const openCert = (list, i) => { setCert({ list, i }); certDlg.current?.showModal?.(); };
+  const closeCert = () => certDlg.current?.close();
+  const turnCert = (d) => setCert((c) => c && ({ ...c, i: Math.max(0, Math.min(c.list.length - 1, c.i + d)) }));
   const a = achievements[at];
+  const c = cert && cert.list[cert.i];
+  const certCount = achievements.reduce((t, x) => t + (x.certs?.length || 0), 0);
   return (
     <div className="pg pg-achievements">
-      <Head id="achievements" eyebrow="Passport stamps" title="Stamps" lead={`${n} so far. Tap one for details.`} />
+      <Head id="achievements" eyebrow="Passport stamps" title="Stamps"
+        lead={<>{n} so far, with {certCount} certificates. Tap one for details.{certificatesPdf && <> <a href={certificatesPdf} target="_blank" rel="noopener">All certificates (PDF)</a></>}</>} />
       <ul className="stamps2">
         {achievements.map((s, i) => (
           <li key={s.id}>
@@ -340,6 +481,21 @@ export function AchievementsPage() {
               {a.detail && <div><dt>Details</dt><dd>{a.detail}</dd></div>}
               <div><dt>Date</dt><dd>{a.date}</dd></div>
             </dl>
+            {a.certs?.length > 0 && (
+              <div className="entry-certs">
+                <p className="pw-label">{a.certs.length > 1 ? 'Certificates' : 'Certificate'}</p>
+                <ul>
+                  {a.certs.map((ct, j) => (
+                    <li key={ct.src}>
+                      <button onClick={() => openCert(a.certs, j)} aria-label={`View certificate: ${a.title}, ${ct.label}`}>
+                        <img src={ct.src} alt="" loading="lazy" decoding="async" />
+                        <span>{ct.label}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div className="entry-nav">
               <button className="pill ghost" onClick={() => turn(-1)} disabled={at === 0}><ArrowLeft width={16} height={16} /> Back</button>
               <span className="entry-dots" aria-hidden="true">{achievements.map((s, i) => <i key={s.id} className={i === at ? 'on' : ''} />)}</span>
@@ -348,15 +504,36 @@ export function AchievementsPage() {
           </div>
         </div>
       </dialog>
+
+      <dialog ref={certDlg} className="cert-dialog" aria-label="Certificate" onClose={() => setCert(null)}
+        onClick={(e) => { if (e.target === certDlg.current) closeCert(); }}
+        onKeyDown={(e) => { if (e.key === 'ArrowRight') { e.stopPropagation(); turnCert(1); } if (e.key === 'ArrowLeft') { e.stopPropagation(); turnCert(-1); } }}>
+        {c && (
+          <>
+            <div className="cert-bar">
+              <strong>{a.title} · {c.label}</strong>
+              <div className="row">
+                {cert.list.length > 1 && <>
+                  <button className="icon-btn" onClick={() => turnCert(-1)} disabled={cert.i === 0} aria-label="Previous certificate"><ArrowLeft width={18} height={18} /></button>
+                  <span className="muted">{cert.i + 1} / {cert.list.length}</span>
+                  <button className="icon-btn" onClick={() => turnCert(1)} disabled={cert.i === cert.list.length - 1} aria-label="Next certificate"><ArrowRight width={18} height={18} /></button>
+                </>}
+                <button className="icon-btn" onClick={closeCert} aria-label="Close certificate">✕</button>
+              </div>
+            </div>
+            <img className="cert-img" key={c.src} src={c.src} alt={`${a.title} certificate, ${c.label}, awarded to ${person.name}`} />
+          </>
+        )}
+      </dialog>
     </div>
   );
 }
 
-// ---------- Skills: three suitcases ----------
+// ---------- Skills: one suitcase per group ----------
 export function SkillsPage() {
   return (
     <div className="pg pg-skills">
-      <Head id="skills" eyebrow="In my luggage" title="Skills" lead="Packed for Software Engineer and IT Support roles." />
+      <Head id="skills" eyebrow="In my luggage" title="Skills" lead="Packed for AI Software Developer and IT Support roles." />
       <div className="cases">
         {skills.map((g, i) => {
           const Icon = iconByName[g.icon] || Code;
@@ -373,7 +550,11 @@ export function SkillsPage() {
           );
         })}
       </div>
-      {skillsAlso && <p className="more-line">{skillsAlso}</p>}
+      {skillsAlso?.length > 0 && (
+        <dl className="also-lines">
+          {skillsAlso.map((l) => <div key={l.label}><dt>{l.label}</dt><dd>{l.text}</dd></div>)}
+        </dl>
+      )}
     </div>
   );
 }

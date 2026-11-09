@@ -161,6 +161,17 @@ export default function MapArt() {
         </g>
 
         {/* Passport control (achievements stop, 500,820) */}
+        {/* Hackathon finish line + trophy (hackathons stop, 640,790) */}
+        <g className="lm" data-lm="hackathons">
+          <g className="ma-map">
+            <path d="M628 800 h24 M634 800 v-6 h12 v6 M632 778 h16 v6 a8 8 0 0 1 -16 0 z M640 792 v2" />
+            <path className="ma-thin" d="M632 781 h-4 a3 3 0 0 0 4 6 M648 781 h4 a3 3 0 0 1 -4 6" />
+          </g>
+          <g className="ma-stamp">
+            <path d="M664 806 V776 M664 777 h14 l-3 5 3 5 h-14" />
+          </g>
+        </g>
+
         <g className="lm" data-lm="achievements">
           <g className="ma-map">
             <path d="M484 830 V808 H516 V830 M480 808 H520 M486 808 L490 798 H510 L514 808" />

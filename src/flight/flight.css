@@ -262,7 +262,7 @@ html.fx-lock, html.fx-lock body { overflow: hidden; height: 100%; overscroll-beh
 /* Home: words on the left (top on phones), art on the right (bottom on phones) */
 .fx[data-mode='hero'] .stage { justify-items: start; align-items: center; padding-left: clamp(24px, 6vw, 96px); }
 .fx[data-mode='hero'] .page-card { width: min(620px, 50vw); padding: 0; overflow: visible; }
-.fx[data-mode='achievements'] .page-card, .fx .page-card.card-achievements { width: min(1040px, 100%); }
+.fx .page-card.card-hackathons, .fx .page-card.card-skills { width: min(1040px, 100%); }
 @media (max-width: 899px), (max-aspect-ratio: 11/10) {
   .hero-clear { background: linear-gradient(180deg, var(--sky-top, var(--bg-1)) 0%, color-mix(in srgb, var(--sky-top, var(--bg-1)) 92%, transparent) 52%, transparent 66%); }
   .fx[data-mode='hero'] .stage { align-items: start; justify-items: stretch; padding-left: max(16px, env(safe-area-inset-left, 0px)); }
